@@ -3,18 +3,41 @@ import readlineSync from 'readline-sync';
 import readline from 'readline';
 import { EventEmitter } from 'events';
 
+
+/* to do:  파일 분리 + 스테이지 등 다른 클래스 객체화 */
+
+
 //================================================================================================================================
 //================================================================================================================================
 //================================================================================================================================
 // Player와 Monster 등의 초기화 값 데이터 : 하드코딩을 막기 위해
 const InitialStatData = {
     playerMaxHp: 100,
-    playerDmg: 30,
+    playerDmg: 20,
     playerHealAmount: 10,
+    playerArmorInitAmount: 5,
+    playerArmorAddAmount: 15,
     monsterMaxHp: 50,
     monsterHpCoef: 10,
-    monsterDmg: 20,
+    monsterDmg: 10,
     monsterDmgCoef: 5,
+    monsterArmorInitAmount: 5,
+    monsterArmorAddAmount: 10,
+};
+// 확률값에 대한 초기화값 데이터 : -Prob 접미사 사용, x/100 값으로 백분율임
+const InitialProbData = {
+    perfectBlockProb : 3,               // 완벽한 방어 확률
+
+};
+// 그 이외 중요한 초기 게임 데이터
+const GameData = {
+    maxStageNum : 10,
+};
+// 액션타입
+const ActionStateType = {
+    Basic : 'basic',
+    Defense : 'defense',
+    CounterAtk : 'counterAtk',
 };
 
 //================================================================================================================================
@@ -24,7 +47,11 @@ const InitialStatData = {
 
 class Player extends EventEmitter {
     // private: stat vars
-    #maxHp; #hp; #dmg;
+    #maxHp; #hp; #dmg; #armor;
+
+    // need state variable: basic, defense, counteratk
+    #actionState;
+
     // 생성자
     constructor() {
         // eventemitter 초기화
@@ -33,33 +60,73 @@ class Player extends EventEmitter {
         this.#maxHp = InitialStatData.playerMaxHp;
         this.#hp = this.#maxHp;
         this.#dmg = InitialStatData.playerDmg;
+        this.#armor = InitialStatData.playerArmorInitAmount;
+        this.#actionState = ActionStateType.Basic;
     }
-
+    // 공격: 나의 데미지 전달
     attack(monster) {
-        // 플레이어의 공격
         monster.beAttacked(this.#dmg);
     }
+    // 피격: 상대가 준 데미지에 대해 방어도 경감하여 적용
     beAttacked(dmg){
         // 체력 디스플레이 음수를 안 보이게 하기 위해 : .. 나중에 딱뎀 or 압살 같은거로 바꾸면 바꿔야함
-        this.#hp = Math.max(this.#hp - dmg, 0); 
+        const processedDmg = Math.max(dmg - this.#armor, 0);
+        this.#hp = Math.max(this.#hp - processedDmg, 0); 
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
             this.#die();
         }
     }
+    // 치유: 치유량만큼 치유 (기본값: 기본 스테이지 클리어 치유량)
     heal(healAmount = InitialStatData.playerHealAmount){
         // 체력 회복: 최대체력보다 높을 순 없다.
         this.#hp = Math.min(this.#hp + healAmount, this.#maxHp);
     }
-    // 사망
+    // 액션상태 지정
+    setActionState(targetActionState = ActionStateType.Basic){
+        this.#actionState = targetActionState;
+        switch(targetActionState){
+            // 1) basic : 일반 상태로 돌아오기
+            case ActionStateType.Basic:
+                this.#getArmorOrigin();           // 원래 방어도로 롤백
+                break;
+            // 2) defense : 방어도 증가
+            case ActionStateType.Defense:
+                this.#gainArmorTemp();           // 방어 태세 : 1턴동안 추가 방어도 획득
+                break;
+            case ActionStateType.CounterAtk:
+                break;
+            default :
+                break;
+        }
+    }
+    // 
+    // 방어도 획득: 일시적인 획득 : 나중에 콜백되어 초기화된다
+    #gainArmorTemp(armorAmount = InitialStatData.playerArmorAddAmount){
+        this.#armor += armorAmount;
+    }
+    // 방어도 콜백
+    #getArmorOrigin(){
+        this.#armor = InitialStatData.playerArmorInitAmount;
+    }
+    // defense 상태 : 피격 시 일정확률로 완벽한 방어 발동
+    #isPerfectBlocked(){
+        return Math.random() <= (InitialProbData.perfectBlockProb / 100);
+    }
+
+    // 사망: 데스 이벤트 델리게이트
     #die(){
         this.emit('death', this);
     }
+    // getter funcs
     get hp(){
         return this.#hp;
     }
     get dmg(){
         return this.#dmg;
+    }
+    get armor(){
+        return this.#armor;
     }
 }
 
@@ -103,15 +170,11 @@ class Monster extends EventEmitter {
 // 플레이어 정보, 몬스터 정보
 function displayStatus(stage, player, monster) {
     console.log(chalk.magentaBright(`\n=== Current Status ================`));
-    console.log(
-        chalk.cyanBright(`| Stage: ${stage} \n`) +
-        chalk.blueBright(
-            `| Player Stat: HP : ${player.hp}} Atk: ${player.dmg}\n`
-        ) +
-        chalk.redBright(
-            `| Monster Stat: HP : ${monster.hp}} Atk: ${monster.dmg}`
-        ),
-    );
+    const stageStat = chalk.cyanBright(` Stage: ${stage} \n`);
+    const playerStat = chalk.blueBright(` Player Stat:   HP : ${player.hp} Atk: ${player.dmg} Armor: ${player.armor}\n`);
+    const monsterStat = chalk.redBright(` Monster Stat:  HP : ${monster.hp} Atk: ${monster.dmg} Armor: ${monster.armor}`);
+    console.log(stageStat + playerStat + monsterStat);
+
     console.log(chalk.magentaBright(`===================================\n`));
 };
 // 전투 씬
@@ -136,10 +199,14 @@ const battle = async (stage, player, monster) => {
 
     // 턴제 전투 로직
     while (player.hp > 0) {
+        // +----------------------------------+ Player 턴 시작 +-----------------------------------
         // 콘솔창 초기화 후 그리기
         console.clear();
         displayStatus(stage, player, monster);
         displayLog(log_actionHistory);
+
+        // player의 actionState=> basic으로 초기화 (턴이 종료되고 새 턴을 시작하므로)
+        player.setActionState();
 
         // 사용자 턴 입력 받기
         const isPlayerInputValid = await flowPlayerTurn(stage, player, monster, log_actionHistory);
@@ -149,6 +216,9 @@ const battle = async (stage, player, monster) => {
         // 몬스터 생존 확인
         if (!isMonsterAlive)
             break;
+        // -----------------------------------+ Player 턴 종료 +----------------------------------+ 
+
+        // +----------------------------------+ Monster 턴 시작 +-----------------------------------
 
         // 콘솔창 초기화 후 다시 그리기
         console.clear();
@@ -159,6 +229,7 @@ const battle = async (stage, player, monster) => {
         // 플레이어 생존 확인
         if (!isPlayerAlive)
             break;
+        // -----------------------------------+ Monster 턴 종료 +----------------------------------+ 
     }
     // 상태와 액션 로그 내용위해
     const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(log_actionHistory)];
@@ -170,18 +241,15 @@ const battle = async (stage, player, monster) => {
     // 몬스터 처치 완료한 경우
     if (!isMonsterAlive){
         await displayInstantTextAnim(chalk.black.bgWhite(`stage ${stage} 몬스터를 무찔렀다!`), 2000, callbacks);
-
         // 스테이지 클리어 시, 마지막 스테이지를 제외하고 피를 회복하자.
         const stageClearHealAmount = 10;
-        if (stage < MaxStageNum){
+        if (stage < GameData.maxStageNum){
             await displayInstantTextAnim(chalk.green.bgWhite(`[sys] 스테이지를 클리어하여 ${stageClearHealAmount}만큼의 체력을 회복했다!`), 2000, callbacks);
             player.heal();
             await displayInstantTextAnim(chalk.green.bgWhite(`[sys] 현재 체력 ${player.hp}`), 2000, callbacks);
         }
         return;
     }
-
-
 }
 
 // 시간 지연을 위한
@@ -263,7 +331,7 @@ async function flowPlayerTurn(stage, player, monster, logs){
     }
     console.log(
         chalk.green(
-            `\n1. 공격한다 2. 아무것도 하지않는다.`,
+            `\n1. 공격 2. 방어 3. 반격 `,
         ),
     );
     const choice = readlineSync.question('[Player Turn] ::> select your choice ::>  ');
@@ -277,7 +345,14 @@ async function flowPlayerTurn(stage, player, monster, logs){
             player.attack(monster);
             return true;
         case '2':
-            logs.push(chalk.green(`[${choice} 선택됨] :: `));
+            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`>방어>`) + chalk.yellow(` << ${player.armor} 방어도 증가`));
+            player.setActionState(ActionStateType.Defense);
+            //player.gainArmorTemp();
+            return true;
+        case '3':
+            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`>방어>`) + chalk.yellow(` << ${player.armor} 방어도 증가`));
+            player.setActionState(ActionStateType.CounterAtk);
+            //player.gainArmorTemp();
             return true;
         default:
             logs.push(warnMsg);
@@ -292,15 +367,13 @@ async function flowMonsterTurn(stage, player, monster, logs){
     logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 피해를 받음`));
 };
 
-const MaxStageNum = 10;
-
 // server.js에서 export되는 게임 시작 함수
 export async function startGame() {
     console.clear();
     const player = new Player();
     let stage = 1;
 
-    while (stage <= MaxStageNum) {
+    while (stage <= GameData.maxStageNum) {
         const monster = new Monster(stage);
         await battle(stage, player, monster);
 
@@ -318,17 +391,7 @@ export async function startGame() {
 
 //================================================================================================================================
 //================================================================================================================================
-//================================================================================================================================
-// EVENT EMITTER 이벤트 리스너
 
-// player.on('death', (actor) => {
-//     console.log("으앙 플레이어 쥬금");
-// });
-
-
-// monster.on('death', (actor) => {
-//     console.log("으앙 플레이어 쥬금");
-// });
 
 //================================================================================================================================
 //================================================================================================================================
