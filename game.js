@@ -4,19 +4,10 @@ import readline from 'readline';
 import { Player } from './Player.js';
 import { Monster } from './Monster.js';
 import { InitialStatData, InitialProbData, GameData, ActionStateType} from './data.js';
-
+import { displayStatus, displayLog, displayTextAnim } from './display.js';
 /* to do:  파일 분리 + 스테이지 등 다른 클래스 객체화 */
 
-// 플레이어 정보, 몬스터 정보
-function displayStatus(stage, player, monster) {
-    console.log(chalk.magentaBright(`\n=== Current Status ================`));
-    const stageStat = chalk.cyanBright(` Stage: ${stage} \n`);
-    const playerStat = chalk.blueBright(` Player Stat:   HP : ${player.hp} Atk: ${player.dmg} Armor: ${player.armor}\n`);
-    const monsterStat = chalk.redBright(` Monster Stat:  HP : ${monster.hp} Atk: ${monster.dmg} Armor: ${monster.armor}`);
-    console.log(stageStat + playerStat + monsterStat);
 
-    console.log(chalk.magentaBright(`===================================\n`));
-};
 // 전투 씬
 const battle = async (stage, player, monster) => {
     // 플레이어 및 몬스터의 액션 로그에 대한 히스토리를 저장하는 공간
@@ -96,49 +87,8 @@ const battle = async (stage, player, monster) => {
 async function delay(duration) {
     await new Promise((resolve) => setTimeout(resolve, duration));
 };
-// targetLogs 배열에 대한 로그 출력
-function displayLog(targetLogs){
-    targetLogs.forEach((log) => {console.log(log)});
-};
-// 콘솔창에 텍스트를 전부 지우고 애니메이션으로 띄움
-async function displayTextAnim(text, duration, prevConsoleFunctions = null) {
-    return new Promise((resolve) => {
-        const showTime = duration / (text.length * 2);
-        let index = 0;
 
-        // 배경색을 설정하기 위한 변수
-        const originalStyle = chalk.reset; // 원래 스타일 저장
-        
-        // 문자열 나타내기
-        const showInterval = setInterval(() => {
-            if (index < text.length) {
-                console.clear();
-                // 인자로 받은 함수들 실행
-                prevConsoleFunctions?.forEach(func => {
-                    func();
-                });
-                console.log(originalStyle(text.slice(0, ++index))); // 원래 스타일 적용
-            } else {
-                clearInterval(showInterval);
-                let revIndex = text.length - 1;
-                const hideInterval = setInterval(() => {
-                    console.clear();
-                    // 인자로 받은 함수들 실행
-                    prevConsoleFunctions?.forEach(func => {
-                        func();
-                    });
-                    console.log(originalStyle(text.slice(0, revIndex))); // 원래 스타일 적용
-                    revIndex--;
-                    // exit animation
-                    if (revIndex < 0) {
-                        clearInterval(hideInterval);
-                        resolve(); // 애니메이션 완료 시 Promise 해결
-                    }
-                }, showTime);
-            }
-        }, showTime);
-    });
-};
+
 // 플레이어 턴 액션 : 공격, 대기 2가지 선택지 현재는
 // 플레이어 입력의 유효성 반환
 async function flowPlayerTurn(stage, player, monster, logs){
