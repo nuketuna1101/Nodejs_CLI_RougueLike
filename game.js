@@ -6,18 +6,30 @@ import { EventEmitter } from 'events';
 //================================================================================================================================
 //================================================================================================================================
 //================================================================================================================================
+// Player와 Monster 등의 초기화 값 데이터 : 하드코딩을 막기 위해
+const InitialStatData = {
+    playerMaxHp: 100,
+    playerDmg: 30,
+    playerHealAmount: 10,
+
+};
+
+//================================================================================================================================
+//================================================================================================================================
+//================================================================================================================================
 // Player와 Monster 클래스
 
 class Player extends EventEmitter {
     // private: stat vars
-    #hp; #dmg;
+    #maxHp; #hp; #dmg;
     // 생성자
     constructor() {
         // eventemitter 초기화
         super();    
         // 스탯 초기화
-        this.#hp = 100;
-        this.#dmg = 30;
+        this.#maxHp = InitialStatData.playerMaxHp;
+        this.#hp = this.#maxHp;
+        this.#dmg = InitialStatData.playerDmg;
     }
 
     attack(monster) {
@@ -25,11 +37,16 @@ class Player extends EventEmitter {
         monster.beAttacked(this.#dmg);
     }
     beAttacked(dmg){
+        // 체력 디스플레이 음수를 안 보이게 하기 위해 : .. 나중에 딱뎀 or 압살 같은거로 바꾸면 바꿔야함
         this.#hp = Math.max(this.#hp - dmg, 0); 
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
             this.#die();
         }
+    }
+    heal(healAmount = InitialStatData.playerHealAmount){
+        // 체력 회복: 최대체력보다 높을 순 없다.
+        this.#hp = Math.min(this.#hp + healAmount, this.#maxHp);
     }
     // 사망
     #die(){
@@ -92,7 +109,7 @@ function displayStatus(stage, player, monster) {
         ),
     );
     console.log(chalk.magentaBright(`===================================\n`));
-}
+};
 // 전투 씬
 const battle = async (stage, player, monster) => {
     // 플레이어 및 몬스터의 액션 로그에 대한 히스토리를 저장하는 공간
@@ -113,7 +130,7 @@ const battle = async (stage, player, monster) => {
     });
 
     // 스테이지 적과 최초 조우 시 콘솔창
-    await displayTextAnim("앗, 야생의 몬스터가 나타났다.", 1000);
+    await displayInstantTextAnim("앗, 야생의 몬스터가 나타났다.", 1000);
 
     // 턴제 전투 로직
     while (player.hp > 0) {
@@ -141,45 +158,39 @@ const battle = async (stage, player, monster) => {
         if (!isPlayerAlive)
             break;
     }
-
-    if (!isMonsterAlive){
-        await delay(1000); 
-        await displayTextAnim(chalk.black.bgWhite(`stage ${stage} 몬스터를 무찔렀다!`), 2000);
+    const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(log_actionHistory)];
+    // 플레이어가 사망한 경우
+    if(!isPlayerAlive){
+        await displayInstantTextAnim(chalk.black.bgWhite(`stage ${stage} 플레이어 사망하셨습니다.`), 2000, callbacks);
         return;
     }
+    // 몬스터 처치 완료한 경우
+    if (!isMonsterAlive){
+        await displayInstantTextAnim(chalk.black.bgWhite(`stage ${stage} 몬스터를 무찔렀다!`), 2000, callbacks);
 
-    if(!isPlayerAlive){
-        // 플레이어가 사망한 경우
-        const loopTime = 5;
-        const delayTime = 250;
-        let curLoop = loopTime;
-        while(curLoop-- > 0){
-            console.clear();
-            displayStatus(stage, player, monster);
-            displayLog(log_actionHistory);
-            console.log(chalk.black.bgRed(`GAME OVER  stage ${stage}`));
-            await delay(delayTime); 
-            console.clear();
-            displayStatus(stage, player, monster);
-            displayLog(log_actionHistory);
-            console.log(chalk.red.bgBlack(`GAME OVER  stage ${stage}`));
-            await delay(delayTime); 
+        // 스테이지 클리어 시, 마지막 스테이지를 제외하고 피를 회복하자.
+        const stageClearHealAmount = 10;
+        if (stage < MaxStageNum){
+            await displayInstantTextAnim(chalk.green.bgWhite(`[sys] 스테이지를 클리어하여 ${stageClearHealAmount}만큼의 체력을 회복했다!`), 2000, callbacks);
+            player.heal();
+            await displayInstantTextAnim(chalk.green.bgWhite(`[sys] 현재 체력 ${player.hp}`), 2000, callbacks);
         }
         return;
     }
 
-};
+
+}
 
 // 시간 지연을 위한
 async function delay(duration) {
     await new Promise((resolve) => setTimeout(resolve, duration));
-}
+};
 // targetLogs 배열에 대한 로그 출력
 function displayLog(targetLogs){
     targetLogs.forEach((log) => {console.log(log)});
-}
+};
 // 콘솔창에 텍스트를 전부 지우고 애니메이션으로 띄움
-async function displayTextAnim(text, duration) {
+async function displayInstantTextAnim(text, duration, prevConsoleFunctions = null) {
     return new Promise((resolve) => {
         const showTime = duration / (text.length * 2);
         let index = 0;
@@ -191,12 +202,20 @@ async function displayTextAnim(text, duration) {
         const showInterval = setInterval(() => {
             if (index < text.length) {
                 console.clear();
-                console.log(originalStyle(text.slice(0, index++))); // 원래 스타일 적용
+                // 인자로 받은 함수들 실행
+                prevConsoleFunctions?.forEach(func => {
+                    func();
+                });
+                console.log(originalStyle(text.slice(0, ++index))); // 원래 스타일 적용
             } else {
                 clearInterval(showInterval);
                 let revIndex = text.length - 1;
                 const hideInterval = setInterval(() => {
                     console.clear();
+                    // 인자로 받은 함수들 실행
+                    prevConsoleFunctions?.forEach(func => {
+                        func();
+                    });
                     console.log(originalStyle(text.slice(0, revIndex))); // 원래 스타일 적용
                     revIndex--;
                     // exit animation
@@ -208,7 +227,30 @@ async function displayTextAnim(text, duration) {
             }
         }, showTime);
     });
-}
+};
+// 콘솔창에 텍스트를 전부 지우고 애니메이션으로 띄움
+async function displayTextAnim(text, duration, prevConsoleFunctions = null) {
+    return new Promise((resolve) => {
+        const showTime = duration / text.length;
+        let index = 0;
+        // 배경색을 설정하기 위한 변수
+        const originalStyle = chalk.reset; // 원래 스타일 저장
+        
+        // 문자열 나타내기
+        const showInterval = setInterval(() => {
+            if (index < text.length) {
+                console.clear();
+                // 인자로 받은 함수들 실행
+                prevConsoleFunctions?.forEach(func => {
+                    func();
+                });
+                console.log(originalStyle(text.slice(0, ++index))); // 원래 스타일 적용
+            } else {
+                clearInterval(showInterval);
+            }
+        }, showTime);
+    });
+};
 // 플레이어 턴 액션 : 공격, 대기 2가지 선택지 현재는
 // 플레이어 입력의 유효성 반환
 async function flowPlayerTurn(stage, player, monster, logs){
@@ -228,7 +270,7 @@ async function flowPlayerTurn(stage, player, monster, logs){
     // 플레이어의 선택에 따라 다음 행동 처리
     switch (choice) {
         case '1':
-            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`>공격>`) + chalk.yellow(` ${player.dmg}의 피해를 줌`));
+            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`>공격>`) + chalk.yellow(` << ${player.dmg}의 피해를 줌`));
             player.attack(monster);
             return true;
         case '2':
@@ -238,15 +280,16 @@ async function flowPlayerTurn(stage, player, monster, logs){
             logs.push(warnMsg);
     }
     return false;
-}
+};
 // 몬스터 턴 액션 : 우선은 공격으로 고정
 async function flowMonsterTurn(stage, player, monster, logs){
-    await delay(500); 
-    console.log(chalk.yellow("몬스터 행동 선택 중..."));
-    await delay(500); 
+    const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(logs)];
+    await displayInstantTextAnim(chalk.yellow("몬스터 행동 선택 중..."), 1000, callbacks);
     monster.attack(player);
-    logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` ${monster.dmg}의 피해를 받음`));
-}
+    logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 피해를 받음`));
+};
+
+const MaxStageNum = 10;
 
 // server.js에서 export되는 게임 시작 함수
 export async function startGame() {
@@ -254,7 +297,7 @@ export async function startGame() {
     const player = new Player();
     let stage = 1;
 
-    while (stage <= 10) {
+    while (stage <= MaxStageNum) {
         const monster = new Monster(stage);
         await battle(stage, player, monster);
 

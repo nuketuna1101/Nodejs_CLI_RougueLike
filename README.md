@@ -2,6 +2,8 @@
 
 ## CLI 텍스트 기반 로그라이크 게임
 
+- how to play? : type "node server.js" to run the game
+
 ### 필수구현
 
 #### 완료한 필수구현 사항
