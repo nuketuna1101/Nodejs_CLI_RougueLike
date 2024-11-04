@@ -3,6 +3,11 @@ import readlineSync from 'readline-sync';
 import readline from 'readline';
 import { EventEmitter } from 'events';
 
+//================================================================================================================================
+//================================================================================================================================
+//================================================================================================================================
+// Player와 Monster 클래스
+
 class Player extends EventEmitter {
     // private: stat vars
     #hp; #dmg;
@@ -15,15 +20,12 @@ class Player extends EventEmitter {
         this.#dmg = 30;
     }
 
-    // 
-    
-
     attack(monster) {
         // 플레이어의 공격
         monster.beAttacked(this.#dmg);
     }
     beAttacked(dmg){
-        this.#hp -= dmg;
+        this.#hp = Math.max(this.#hp - dmg, 0); 
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
             this.#die();
@@ -50,14 +52,12 @@ class Monster extends EventEmitter {
         this.#dmg = 10 + 10 * stage;
     }
 
-
-
     attack(player) {
         // 몬스터의 공격
         player.beAttacked(this.#dmg);
     }
     beAttacked(dmg){
-        this.#hp -= dmg;
+        this.#hp = Math.max(this.#hp - dmg, 0); 
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
             this.#die();
@@ -74,9 +74,14 @@ class Monster extends EventEmitter {
         return this.#dmg;
     }
 }
+//================================================================================================================================
+//================================================================================================================================
+//================================================================================================================================
+
+
 // 플레이어 정보, 몬스터 정보
 function displayStatus(stage, player, monster) {
-    console.log(chalk.magentaBright(`\n=== Current Status ===`));
+    console.log(chalk.magentaBright(`\n=== Current Status ================`));
     console.log(
         chalk.cyanBright(`| Stage: ${stage} \n`) +
         chalk.blueBright(
@@ -86,11 +91,8 @@ function displayStatus(stage, player, monster) {
             `| Monster Stat: HP : ${monster.hp}} Atk: ${monster.dmg}`
         ),
     );
-    console.log(chalk.magentaBright(`=====================\n`));
+    console.log(chalk.magentaBright(`===================================\n`));
 }
-// 시간 지연을 위한
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 // 전투 씬
 const battle = async (stage, player, monster) => {
     // 플레이어 및 몬스터의 액션 로그에 대한 히스토리를 저장하는 공간
@@ -110,7 +112,8 @@ const battle = async (stage, player, monster) => {
         isMonsterAlive = false;
     });
 
-
+    // 스테이지 적과 최초 조우 시 콘솔창
+    await displayTextAnim("앗, 야생의 몬스터가 나타났다.", 1000);
 
     // 턴제 전투 로직
     while (player.hp > 0) {
@@ -120,7 +123,10 @@ const battle = async (stage, player, monster) => {
         displayLog(log_actionHistory);
 
         // 사용자 턴 입력 받기
-        await flowPlayerTurn(stage, player, monster, log_actionHistory);
+        const isPlayerInputValid = await flowPlayerTurn(stage, player, monster, log_actionHistory);
+        // 사용자 턴 입력 올바르지 않으면 다시
+        if (!isPlayerInputValid)
+            continue;
 
         if (!isMonsterAlive)
             break;
@@ -137,22 +143,8 @@ const battle = async (stage, player, monster) => {
     }
 
     if (!isMonsterAlive){
-        // 몬스터를 처치한 스테이지 클리어 flow
-        const loopTime = 5;
-        const delayTime = 250;
-        let curLoop = loopTime;
-        while(curLoop-- > 0){
-            console.clear();
-            displayStatus(stage, player, monster);
-            displayLog(log_actionHistory);
-            console.log(chalk.black.bgWhite(`stage ${stage} 몬스터를 무찔렀다!`));
-            await delay(delayTime); 
-            console.clear();
-            displayStatus(stage, player, monster);
-            displayLog(log_actionHistory);
-            console.log(chalk.white.bgBlack(`stage ${stage} 몬스터를 무찔렀다!`));
-            await delay(delayTime); 
-        }
+        await delay(1000); 
+        await displayTextAnim(chalk.black.bgWhite(`stage ${stage} 몬스터를 무찔렀다!`), 2000);
         return;
     }
 
@@ -178,12 +170,47 @@ const battle = async (stage, player, monster) => {
 
 };
 
+// 시간 지연을 위한
+async function delay(duration) {
+    await new Promise((resolve) => setTimeout(resolve, duration));
+}
 // targetLogs 배열에 대한 로그 출력
 function displayLog(targetLogs){
     targetLogs.forEach((log) => {console.log(log)});
 }
+// 콘솔창에 텍스트를 전부 지우고 애니메이션으로 띄움
+async function displayTextAnim(text, duration) {
+    return new Promise((resolve) => {
+        const showTime = duration / (text.length * 2);
+        let index = 0;
 
+        // 배경색을 설정하기 위한 변수
+        const originalStyle = chalk.reset; // 원래 스타일 저장
+        
+        // 문자열 나타내기
+        const showInterval = setInterval(() => {
+            if (index < text.length) {
+                console.clear();
+                console.log(originalStyle(text.slice(0, index++))); // 원래 스타일 적용
+            } else {
+                clearInterval(showInterval);
+                let revIndex = text.length - 1;
+                const hideInterval = setInterval(() => {
+                    console.clear();
+                    console.log(originalStyle(text.slice(0, revIndex))); // 원래 스타일 적용
+                    revIndex--;
+                    // exit animation
+                    if (revIndex < 0) {
+                        clearInterval(hideInterval);
+                        resolve(); // 애니메이션 완료 시 Promise 해결
+                    }
+                }, showTime);
+            }
+        }, showTime);
+    });
+}
 // 플레이어 턴 액션 : 공격, 대기 2가지 선택지 현재는
+// 플레이어 입력의 유효성 반환
 async function flowPlayerTurn(stage, player, monster, logs){
     const warnMsg = chalk.red(`올바른 선택을 하세요.`);
     if (logs.length > 0 && logs[logs.length - 1].includes(warnMsg)) {
@@ -203,17 +230,17 @@ async function flowPlayerTurn(stage, player, monster, logs){
         case '1':
             logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`>공격>`) + chalk.yellow(` ${player.dmg}의 피해를 줌`));
             player.attack(monster);
-            break;
+            return true;
         case '2':
-            logs.push(chalk.green(`${choice}를 선택하셨습니다.`));
-            break;
+            logs.push(chalk.green(`[${choice} 선택됨] :: `));
+            return true;
         default:
             logs.push(warnMsg);
     }
+    return false;
 }
 // 몬스터 턴 액션 : 우선은 공격으로 고정
 async function flowMonsterTurn(stage, player, monster, logs){
-    /* todo: 몬스터 공격 flow */
     await delay(500); 
     console.log(chalk.yellow("몬스터 행동 선택 중..."));
     await delay(500); 
@@ -232,7 +259,9 @@ export async function startGame() {
         await battle(stage, player, monster);
 
         // 스테이지 클리어 및 게임 종료 조건
-
+        if (!player.hp)
+            break;
+        
         stage++;
     }
 }
