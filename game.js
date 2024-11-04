@@ -11,7 +11,10 @@ const InitialStatData = {
     playerMaxHp: 100,
     playerDmg: 30,
     playerHealAmount: 10,
-
+    monsterMaxHp: 50,
+    monsterHpCoef: 10,
+    monsterDmg: 20,
+    monsterDmgCoef: 5,
 };
 
 //================================================================================================================================
@@ -61,12 +64,13 @@ class Player extends EventEmitter {
 }
 
 class Monster extends EventEmitter {
-    #hp;
-    #dmg;
+    // private: stat vars
+    #maxHp; #hp; #dmg;
     constructor(stage) {
         super();
-        this.#hp = 50 + 20 * stage;
-        this.#dmg = 10 + 10 * stage;
+        this.#maxHp = InitialStatData.monsterMaxHp + (stage - 1) * InitialStatData.monsterHpCoef;
+        this.#hp = this.#maxHp;
+        this.#dmg = InitialStatData.monsterDmg + (stage - 1) * InitialStatData.monsterDmgCoef;
     }
 
     attack(player) {
@@ -121,11 +125,9 @@ const battle = async (stage, player, monster) => {
 
     // 이벤트 리스너 등록
     player.on('death', () => {
-        console.log(`플레이어 쥬금.`);
         isPlayerAlive = false;
     });
     monster.on('death', () => {
-        console.log(`몬스터가 처치되었다.`);
         isMonsterAlive = false;
     });
 
@@ -144,7 +146,7 @@ const battle = async (stage, player, monster) => {
         // 사용자 턴 입력 올바르지 않으면 다시
         if (!isPlayerInputValid)
             continue;
-
+        // 몬스터 생존 확인
         if (!isMonsterAlive)
             break;
 
@@ -154,10 +156,11 @@ const battle = async (stage, player, monster) => {
         displayLog(log_actionHistory);
 
         await flowMonsterTurn(stage, player, monster, log_actionHistory);
-
+        // 플레이어 생존 확인
         if (!isPlayerAlive)
             break;
     }
+    // 상태와 액션 로그 내용위해
     const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(log_actionHistory)];
     // 플레이어가 사망한 경우
     if(!isPlayerAlive){
