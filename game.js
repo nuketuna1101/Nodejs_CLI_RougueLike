@@ -1,12 +1,15 @@
 import chalk from 'chalk';
 import readlineSync from 'readline-sync';
 import readline from 'readline';
+import { EventEmitter } from 'events';
 
-class Player {
+class Player extends EventEmitter {
     // private: stat vars
     #hp; #dmg;
     // 생성자
     constructor() {
+        // eventemitter 초기화
+        super();    
         // 스탯 초기화
         this.#hp = 100;
         this.#dmg = 30;
@@ -23,7 +26,12 @@ class Player {
         this.#hp -= dmg;
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
+            this.#die();
         }
+    }
+    // 사망
+    #die(){
+        this.emit('death', this);
     }
     get hp(){
         return this.#hp;
@@ -33,13 +41,16 @@ class Player {
     }
 }
 
-class Monster {
+class Monster extends EventEmitter {
     #hp;
     #dmg;
-    constructor() {
-        this.#hp = 100;
-        this.#dmg = 10;
+    constructor(stage) {
+        super();
+        this.#hp = 50 + 20 * stage;
+        this.#dmg = 10 + 10 * stage;
     }
+
+
 
     attack(player) {
         // 몬스터의 공격
@@ -49,7 +60,12 @@ class Monster {
         this.#hp -= dmg;
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
+            this.#die();
         }
+    }
+    // 사망
+    #die(){
+        this.emit('death', this);
     }
     get hp(){
         return this.#hp;
@@ -72,37 +88,94 @@ function displayStatus(stage, player, monster) {
     );
     console.log(chalk.magentaBright(`=====================\n`));
 }
-
+// 시간 지연을 위한
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-let isPlayerTurn = true;
-
 
 // 전투 씬
 const battle = async (stage, player, monster) => {
-    // 화면 초기화
-    let logs = [];
+    // 플레이어 및 몬스터의 액션 로그에 대한 히스토리를 저장하는 공간
     let log_actionHistory = [];
-    let log_playerAction = [];
-    let log_monsterAction = [];
+
+    // 플레이어 및 몬스터의 상태 플래그
+    let isPlayerAlive = true;
+    let isMonsterAlive = true;
+
+    // 이벤트 리스너 등록
+    player.on('death', () => {
+        console.log(`플레이어 쥬금.`);
+        isPlayerAlive = false;
+    });
+    monster.on('death', () => {
+        console.log(`몬스터가 처치되었다.`);
+        isMonsterAlive = false;
+    });
+
+
+
+    // 턴제 전투 로직
     while (player.hp > 0) {
         // 콘솔창 초기화 후 그리기
         console.clear();
         displayStatus(stage, player, monster);
         displayLog(log_actionHistory);
 
-        //logs.forEach((log) => {console.log(log)});
         // 사용자 턴 입력 받기
         await flowPlayerTurn(stage, player, monster, log_actionHistory);
+
+        if (!isMonsterAlive)
+            break;
 
         // 콘솔창 초기화 후 다시 그리기
         console.clear();
         displayStatus(stage, player, monster);
         displayLog(log_actionHistory);
 
-        // displayLog(logs.concat(log_playerAction));
-
         await flowMonsterTurn(stage, player, monster, log_actionHistory);
+
+        if (!isPlayerAlive)
+            break;
     }
+
+    if (!isMonsterAlive){
+        // 몬스터를 처치한 스테이지 클리어 flow
+        const loopTime = 5;
+        const delayTime = 250;
+        let curLoop = loopTime;
+        while(curLoop-- > 0){
+            console.clear();
+            displayStatus(stage, player, monster);
+            displayLog(log_actionHistory);
+            console.log(chalk.black.bgWhite(`stage ${stage} 몬스터를 무찔렀다!`));
+            await delay(delayTime); 
+            console.clear();
+            displayStatus(stage, player, monster);
+            displayLog(log_actionHistory);
+            console.log(chalk.white.bgBlack(`stage ${stage} 몬스터를 무찔렀다!`));
+            await delay(delayTime); 
+        }
+        return;
+    }
+
+    if(!isPlayerAlive){
+        // 플레이어가 사망한 경우
+        const loopTime = 5;
+        const delayTime = 250;
+        let curLoop = loopTime;
+        while(curLoop-- > 0){
+            console.clear();
+            displayStatus(stage, player, monster);
+            displayLog(log_actionHistory);
+            console.log(chalk.black.bgRed(`GAME OVER  stage ${stage}`));
+            await delay(delayTime); 
+            console.clear();
+            displayStatus(stage, player, monster);
+            displayLog(log_actionHistory);
+            console.log(chalk.red.bgBlack(`GAME OVER  stage ${stage}`));
+            await delay(delayTime); 
+        }
+        return;
+    }
+
 };
 
 // targetLogs 배열에 대한 로그 출력
@@ -121,7 +194,7 @@ async function flowPlayerTurn(stage, player, monster, logs){
             `\n1. 공격한다 2. 아무것도 하지않는다.`,
         ),
     );
-    const choice = readlineSync.question('[Player Turn] : 당신의 선택은? ');
+    const choice = readlineSync.question('[Player Turn] ::> select your choice ::>  ');
     // 입력 후 마지막 한 줄 지우기
     readline.cursorTo(process.stdout, 0);    // 커서를 줄의 시작으로 이동
     readline.clearLine(process.stdout, 0);   // 현재 줄을 지움
@@ -129,14 +202,10 @@ async function flowPlayerTurn(stage, player, monster, logs){
     switch (choice) {
         case '1':
             logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`>공격>`) + chalk.yellow(` ${player.dmg}의 피해를 줌`));
-            //logs.push(chalk.yellow.bgGreen(`> 플레이어 공격`));
-            // 여기에서 새로운 게임 시작 로직을 구현
             player.attack(monster);
             break;
         case '2':
             logs.push(chalk.green(`${choice}를 선택하셨습니다.`));
-            //console.log(chalk.yellow('구현 준비중입니다.. 게임을 시작하세요'));
-            // 업적 확인하기 로직을 구현
             break;
         default:
             logs.push(warnMsg);
@@ -145,9 +214,9 @@ async function flowPlayerTurn(stage, player, monster, logs){
 // 몬스터 턴 액션 : 우선은 공격으로 고정
 async function flowMonsterTurn(stage, player, monster, logs){
     /* todo: 몬스터 공격 flow */
-    await delay(1000); 
+    await delay(500); 
     console.log(chalk.yellow("몬스터 행동 선택 중..."));
-    await delay(1500); 
+    await delay(500); 
     monster.attack(player);
     logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` ${monster.dmg}의 피해를 받음`));
 }
@@ -167,3 +236,25 @@ export async function startGame() {
         stage++;
     }
 }
+
+
+
+
+
+//================================================================================================================================
+//================================================================================================================================
+//================================================================================================================================
+// EVENT EMITTER 이벤트 리스너
+
+// player.on('death', (actor) => {
+//     console.log("으앙 플레이어 쥬금");
+// });
+
+
+// monster.on('death', (actor) => {
+//     console.log("으앙 플레이어 쥬금");
+// });
+
+//================================================================================================================================
+//================================================================================================================================
+//================================================================================================================================
