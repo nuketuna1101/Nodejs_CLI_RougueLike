@@ -1,7 +1,7 @@
 import chalk from 'chalk';
-import { Player } from './player.js';
-import { Monster } from './Monster.js';
-import { InitialStatData, InitialProbData, GameData, ActionStateType} from './data.js';
+import { Player } from '../models/player.js';
+import { Monster } from '../models/Monster.js';
+import { InitialStatData, InitialProbData, GameData, ActionStateType} from '../models/data.js';
 import { refreshWholeDisplay, displayStatus, displayLog, displayTextAnim } from './display.js';
 import { turnPlayerAction, turnMonsterAction } from './turnAction.js';
 /* to do:  파일 분리 + 스테이지 등 다른 클래스 객체화 */

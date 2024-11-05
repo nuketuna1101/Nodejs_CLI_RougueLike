@@ -1,7 +1,9 @@
 import chalk from 'chalk';
 import figlet from 'figlet';
 import readlineSync from 'readline-sync';
-import { startGame } from "./game.js";
+import { startGame } from "./utils/game.js";
+import { checkLeaderboard } from './utils/leaderboard.js';
+import { userLogin } from './utils/login.js';
 
 // 로비 화면을 출력하는 함수
 function displayLobby() {
@@ -23,7 +25,7 @@ function displayLobby() {
     console.log(line);
 
     // 게임 이름
-    console.log(chalk.yellowBright.bold('CLI 게임에 오신것을 환영합니다!'));
+    console.log(chalk.yellowBright.bold(`CLI 게임에 오신것을 환영합니다!    `) + chalk.black.bgYellow(`ID : ${userId}`));
 
     // 설명 텍스트
     console.log(chalk.green('옵션을 선택해주세요.'));
@@ -58,9 +60,8 @@ function handleUserInput() {
             handleUserInput();
             break;
         case '3':
-            console.log(chalk.blue('구현 준비중입니다.. 게임을 시작하세요'));
-            // 옵션 메뉴 로직을 구현
-            handleUserInput();
+            // 리더보드 조회하기
+            checkLeaderboard();
             break;
         case '4':
             console.log(chalk.red('게임을 종료합니다.'));
@@ -74,7 +75,7 @@ function handleUserInput() {
 }
 
 // 게임 시작 함수
-function start() {
+export function start() {
     // 로비 띄우기
     displayLobby();
     // 유저 입력 받기
@@ -82,4 +83,8 @@ function start() {
 }
 
 // 게임 실행
+// start();
+
+
+const userId = await userLogin();
 start();

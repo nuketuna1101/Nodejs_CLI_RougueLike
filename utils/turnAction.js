@@ -7,7 +7,7 @@
 import chalk from 'chalk';
 import readlineSync from 'readline-sync';
 import readline from 'readline';
-import { InitialStatData, InitialProbData, GameData, ActionStateType} from './data.js';
+import { InitialStatData, InitialProbData, GameData, ActionStateType} from '../models/data.js';
 import { displayStatus, displayLog, displayTextAnim } from './display.js';
 
 // 플레이어 턴 액션 : 공격, 대기 2가지 선택지 현재는
@@ -22,7 +22,7 @@ export async function turnPlayerAction(stage, player, monster, logs){
             `\n1. 공격 2. 방어 3. 반격 `,
         ),
     );
-    const choice = readlineSync.question(':: select your choice ::>  ');
+    const choice = readlineSync.question(' input ::>  ');
     // 입력 후 마지막 한 줄 지우기
     readline.cursorTo(process.stdout, 0);    // 커서를 줄의 시작으로 이동
     readline.clearLine(process.stdout, 0);   // 현재 줄을 지움
