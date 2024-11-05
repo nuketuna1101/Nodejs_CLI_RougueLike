@@ -51,22 +51,33 @@ export async function turnMonsterAction(stage, player, monster, logs){
     await displayTextAnim(chalk.yellow("몬스터 행동 선택 중..."), 1000, callbacks);
     let processedDmg;
     let isPefectBlocked = false;
+    let isCounterAtk = false;
 
     // perfectBlock 리스너를 제거하여 중복 방지
     player.removeAllListeners('perfectBlock');
     player.removeAllListeners('processedDmg');
-
+    player.removeAllListeners('counterAtk');
     // perfectBlock 이벤트에 대한 리스너 등록
     player.once('perfectBlock', () => {
         isPefectBlocked = true;
     });
-
+    // counterAtk 이벤트에 대한 리스너 등록
+    player.once('counterAtk', () => {
+        isCounterAtk = true;
+        player.attack(monster, 1.5);
+    });
     // processedDmg 이벤트에 대한 리스너 등록
     player.once('processedDmg', (data) => {
         processedDmg = data;
-        logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 공격 >>`) 
-        + (isPefectBlocked ? chalk.blue(` +[완벽한 방어]+ 발동`) : "") +  chalk.green(` >> ${processedDmg} 피해 받음`));
-        isPefectBlocked = false;
     });
     monster.attack(player);
+
+    logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 공격 >>`) 
+    + (isPefectBlocked ? chalk.blue(` +[완벽한 방어]+ 발동`) : "") +  chalk.green(` >> ${processedDmg} 피해 받음`));
+    if (isCounterAtk)
+        logs.push(chalk.white('              ') + chalk.blue(`+[반격]+ 발동>`) + chalk.yellow(` << ${Math.round(player.dmg * 1.5)}의 피해를 줌`));          // 일단은 반격데미지 하드코딩
+    isPefectBlocked = false;
+    isCounterAtk = false;
+
+
 };

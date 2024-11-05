@@ -31,7 +31,7 @@ const battle = async (stage, player, monster) => {
     await displayTextAnim("앗, 야생의 몬스터가 나타났다.", 1000);
 
     // 턴제 전투 로직
-    while (player.hp > 0) {
+    while (true) {
         // +----------------------------------+ Player 턴 시작 +-----------------------------------
 
         // player의 actionState=> basic으로 초기화 (턴이 종료되고 새 턴을 시작하므로)
@@ -55,7 +55,7 @@ const battle = async (stage, player, monster) => {
 
         await turnMonsterAction(stage, player, monster, log_actionHistory);
         // 플레이어 생존 확인
-        if (!isPlayerAlive)
+        if (!isPlayerAlive || !isMonsterAlive)
             break;
         // -----------------------------------+ Monster 턴 종료 +----------------------------------+ 
     }

@@ -25,26 +25,39 @@ export class Player extends EventEmitter {
         this.#actionState = ActionStateType.Basic;
     }
     // 공격: 나의 데미지 전달
-    attack(monster) {
-        monster.beAttacked(this.#dmg);
+    attack(monster, atkCoef = 1.0) {
+        const tmpDmg = Math.round(this.#dmg * atkCoef);
+        monster.beAttacked(tmpDmg);
     }
     // 피격: 상대가 준 데미지에 대해 방어도 경감하여 적용
     beAttacked(dmg){
         // 체력 디스플레이 음수를 안 보이게 하기 위해 : .. 나중에 딱뎀 or 압살 같은거로 바꾸면 바꿔야함
-        let processedDmg;
-        if (this.#actionState == ActionStateType.Defense 
-            && this.#isPerfectBlocked())
+        // 1차 피해 전처리 : 방어도에 의한 경감
+        let processedDmg = Math.max(dmg - this.#armor, 0);
+        switch(this.#actionState)
         {
-            this.emit('perfectBlock');
-            processedDmg = 0;
-        }
-        else
-        {
-            processedDmg = Math.max(dmg - this.#armor, 0);
+            // 방어 상태일시, 완벽한 방어 발동 체크
+            case ActionStateType.Defense:
+                if (this.#isPerfectBlocked())
+                {
+                    this.emit('perfectBlock');
+                    processedDmg = 0;
+                }
+                break;
+            // 반격 상태일 시, 반격 로직 : 데미지 절반 경감
+            case ActionStateType.CounterAtk:
+                processedDmg = Math.round(processedDmg / 2);
+                break;
+            default :
+                break;
         }
         // 실제 입은 데미지 반환
         this.emit('processedDmg', processedDmg);
         this.#hp = Math.max(this.#hp - processedDmg, 0); 
+
+        if (this.#actionState === ActionStateType.CounterAtk) {
+            this.emit('counterAtk');
+        }
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
             this.#die();
@@ -58,7 +71,8 @@ export class Player extends EventEmitter {
     // 액션상태 지정
     setActionState(targetActionState = ActionStateType.Basic){
         this.#actionState = targetActionState;
-        switch(targetActionState){
+        switch(targetActionState)
+        {
             // 1) basic : 일반 상태로 돌아오기
             case ActionStateType.Basic:
                 this.#getArmorOrigin();           // 원래 방어도로 롤백
