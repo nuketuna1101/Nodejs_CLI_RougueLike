@@ -33,14 +33,12 @@ export async function turnPlayerAction(stage, player, monster, logs){
             player.attack(monster);
             return true;
         case '2':
-            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`|방어|`) + chalk.yellow(` || ${player.armor} 방어도 증가`));
             player.setActionState(ActionStateType.Defense);
-            //player.gainArmorTemp();
+            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`|방어|`) + chalk.yellow(` || 현재 방어도 ${player.armor}`));
             return true;
         case '3':
-            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`<반격|`) + chalk.yellow(` <| ${player.armor} 방어도 증가`));
             player.setActionState(ActionStateType.CounterAtk);
-            //player.gainArmorTemp();
+            logs.push(chalk.green(`[${choice} 선택됨] :: `) + chalk.white.bgGreen(`<반격|`) + chalk.yellow(` <| 반격 모드 활성화`));
             return true;
         default:
             logs.push(warnMsg);
@@ -51,6 +49,12 @@ export async function turnPlayerAction(stage, player, monster, logs){
 export async function turnMonsterAction(stage, player, monster, logs){
     const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(logs)];
     await displayTextAnim(chalk.yellow("몬스터 행동 선택 중..."), 1000, callbacks);
+    // logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 피해를 받음`));
+    let processedDmg;
+    player.once('processedDmg', (data) => {
+        processedDmg = data;
+        logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 공격 >>`) + chalk.green(` >> ${processedDmg} 피해 받음`));
+    });
     monster.attack(player);
-    logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 피해를 받음`));
+
 };

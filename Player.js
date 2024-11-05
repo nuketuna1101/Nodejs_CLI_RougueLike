@@ -32,6 +32,8 @@ export class Player extends EventEmitter {
     beAttacked(dmg){
         // 체력 디스플레이 음수를 안 보이게 하기 위해 : .. 나중에 딱뎀 or 압살 같은거로 바꾸면 바꿔야함
         const processedDmg = Math.max(dmg - this.#armor, 0);
+        // 실제 입은 데미지 반환
+        this.emit('processedDmg', processedDmg);
         this.#hp = Math.max(this.#hp - processedDmg, 0); 
         if (this.#hp <= 0){
             /* 으앙 쥬금 */
