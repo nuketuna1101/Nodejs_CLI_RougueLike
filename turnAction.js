@@ -49,12 +49,24 @@ export async function turnPlayerAction(stage, player, monster, logs){
 export async function turnMonsterAction(stage, player, monster, logs){
     const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(logs)];
     await displayTextAnim(chalk.yellow("몬스터 행동 선택 중..."), 1000, callbacks);
-    // logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 피해를 받음`));
     let processedDmg;
+    let isPefectBlocked = false;
+
+    // perfectBlock 리스너를 제거하여 중복 방지
+    player.removeAllListeners('perfectBlock');
+    player.removeAllListeners('processedDmg');
+
+    // perfectBlock 이벤트에 대한 리스너 등록
+    player.once('perfectBlock', () => {
+        isPefectBlocked = true;
+    });
+
+    // processedDmg 이벤트에 대한 리스너 등록
     player.once('processedDmg', (data) => {
         processedDmg = data;
-        logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 공격 >>`) + chalk.green(` >> ${processedDmg} 피해 받음`));
+        logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 공격 >>`) 
+        + (isPefectBlocked ? chalk.blue(` +[완벽한 방어]+ 발동`) : "") +  chalk.green(` >> ${processedDmg} 피해 받음`));
+        isPefectBlocked = false;
     });
     monster.attack(player);
-
 };

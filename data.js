@@ -8,8 +8,8 @@ export const InitialStatData = {
     playerMaxHp: 100,
     playerDmg: 20,
     playerHealAmount: 10,
-    playerArmorInitAmount: 5,
-    playerArmorAddAmount: 15,
+    playerArmorInitAmount: 2,
+    playerArmorAddAmount: 5,
     monsterMaxHp: 50,
     monsterHpCoef: 10,
     monsterDmg: 10,
@@ -19,7 +19,7 @@ export const InitialStatData = {
 };
 // 확률값에 대한 초기화값 데이터 : -Prob 접미사 사용, x/100 값으로 백분율임
 export const InitialProbData = {
-    perfectBlockProb : 3,               // 완벽한 방어 확률
+    perfectBlockProb : 10,               // 완벽한 방어 확률
 
 };
 // 그 이외 중요한 초기 게임 데이터
