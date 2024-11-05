@@ -4,6 +4,17 @@
 //================================================================================================================================
 //================================================================================================================================
 import chalk from 'chalk';
+// 콘솔창 초기화 후 다시 그리기
+export function refreshWholeDisplay(stage, player, monster, logs){
+    const callbacks = [
+        () => console.clear(), 
+        () => displayStatus(stage, player, monster), 
+        () => displayLog(logs)
+    ];
+    callbacks?.forEach(func => {
+        func();
+    });
+}
 
 // 플레이어 정보, 몬스터 정보
 export function displayStatus(stage, player, monster) {
@@ -38,6 +49,7 @@ export async function displayTextAnim(text, duration, prevConsoleFunctions = nul
                 prevConsoleFunctions?.forEach(func => {
                     func();
                 });
+
                 console.log(originalStyle(text.slice(0, ++index))); // 원래 스타일 적용
             } else {
                 clearInterval(showInterval);
