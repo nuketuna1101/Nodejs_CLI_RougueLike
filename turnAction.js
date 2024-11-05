@@ -73,9 +73,9 @@ export async function turnMonsterAction(stage, player, monster, logs){
     monster.attack(player);
 
     logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`>공격>`) + chalk.yellow(` >> ${monster.dmg}의 공격 >>`) 
-    + (isPefectBlocked ? chalk.blue(` +[완벽한 방어]+ 발동`) : "") +  chalk.green(` >> ${processedDmg} 피해 받음`));
+    + (isPefectBlocked ? chalk.blue(` [완벽한 방어] 발동`) : "") +  chalk.green(` >> ${processedDmg} 피해 받음`));
     if (isCounterAtk)
-        logs.push(chalk.white('              ') + chalk.blue(`+[반격]+ 발동>`) + chalk.yellow(` << ${Math.round(player.dmg * 1.5)}의 피해를 줌`));          // 일단은 반격데미지 하드코딩
+        logs.push(chalk.white('              ') + chalk.blue(`[반격] 발동>`) + chalk.yellow(` << ${Math.round(player.dmg * 1.5)}의 피해를 줌`));          // 일단은 반격데미지 하드코딩
     isPefectBlocked = false;
     isCounterAtk = false;
 

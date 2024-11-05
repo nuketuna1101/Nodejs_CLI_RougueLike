@@ -103,4 +103,6 @@ export async function startGame() {
         
         stage++;
     }
+
+    await displayTextAnim(chalk.black.bgWhite(` G A M E  O V E R`), 2000);
 }
