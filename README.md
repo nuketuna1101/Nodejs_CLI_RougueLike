@@ -2,7 +2,16 @@
 
 ## CLI 텍스트 기반 로그라이크 게임
 
-- how to play? : type "node server.js" to run the game
+- 플레이 방법
+
+```js
+// 1. 웹 서버 시작
+npm run start:webServer
+
+// 2. 게임 시작
+npm run start:game
+
+```
 
 ## 완료 사항 (11/04 완료)
 ---
