@@ -43,7 +43,10 @@ app.post('/leaderboard/update', async (req, res) => {
         {
             // 불일치 시, 새로추가
             await leaderboardRef.add(data);
-            res.status(200).send('[Success] new data updated');
+            res.status(200).send({
+                msg: '[Success] new data updated',
+                flag: 'CREATE'
+            });
         }
         else
         {
@@ -56,43 +59,24 @@ app.post('/leaderboard/update', async (req, res) => {
                 // 기존꺼보다 높으면, 기존 데이터 삭제 후 현재 데이터 추가
                 await leaderboardRef.doc(docSnapshot.id).delete();
                 await leaderboardRef.add(data);
-                res.status(200).send('[Success] prev data deleted and new data updated');
+                res.status(200).send({
+                    msg: '[Success] prev data deleted and new data updated',
+                    flag: 'REPLACE'
+                });
             }
             else
             {
                 // 기존꺼보다 같거나 작으면 업데이트할 이유 x
-                res.status(200).send('[info] no update');
+                res.status(200).send({
+                    msg: '[info] no update',
+                    flag: 'NO_UPDATE'
+                });
             }
         }
     } catch(e) {
         res.status(500).send('[Error] Error updating data');
     }
 });
-
-
-
-
-
-// 현재 연월일과 IP 주소를 Firestore에 저장하는 엔드포인트
-app.post('/leaderboard/add', async (req, res) => {
-    const {date, time, userId, resultStageNo} = req.body;
-    const data = {
-        date: date,
-        time: time,
-        userId: userId,
-        resultStageNo: resultStageNo,
-    };
-
-    try {
-        const db = admin.firestore();
-        await db.collection('cli_rougelike').add(data);
-        res.status(200).send('[Success] data sending completed');
-    } catch (error) {
-        console.error('[Error] Error sending data:', error);
-        res.status(500).send('[Error] Error sending data');
-    }
-});
-
 // [기능] 조회 : 리더보드를 읽어오는 엔드포인트
 app.get('/leaderboard', async (req, res) => {
     try {

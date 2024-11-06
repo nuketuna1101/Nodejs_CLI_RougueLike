@@ -43,7 +43,7 @@ async function displayLeaderboard(){
 
 
 
-// 업데이트 시도
+// fetch API : POST : 리더보드에 데이터 추가
 export async function tryUpdateLeaderboard(userId, resultStageNo){
     const {date, time} = getCurrentDateTime();
     try {
@@ -55,10 +55,11 @@ export async function tryUpdateLeaderboard(userId, resultStageNo){
         
         if (!response.ok)       
             throw new Error('[Error] failed to update leaderboard');        
-        return response.ok;
+        const resJson = await response.json();
+        return resJson.flag;
     } catch (e) {
         console.error('[Error] error occurred :', e);
-        return false;
+        return 'ERROR';
     }
 }
 // 현재 시간 가져오기
@@ -67,23 +68,6 @@ function getCurrentDateTime(){
     const date = currentIsoDate.split('T')[0];
     const time = currentIsoDate.split('T')[1].split('.')[0];
     return {date, time};
-}
-
-
-
-
-// fetch API : POST : 리더보드에 데이터 추가
-export function addLeaderboard(input){
-    if (!isValid(input))
-        return;
-
-    fetch('http://localhost:3000/leaderboard/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify(input),
-        })
-        .then(response => response.text())
-        .catch(error => console.error('[Error] error occurred :', error));
 }
 
 // fetch API : GET : 전체 리더보드 가져오기

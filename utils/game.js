@@ -116,13 +116,23 @@ export async function startGame() {
         // 도중 실패
         await displayTextAnim(chalk.black.bgWhite(` G A M E  O V E R `), 2000);
     }
-    const updateResult = await tryUpdateLeaderboard(userId, --stage);
-    if (updateResult)
-        await displayTextAnim(chalk.green(` 유저 `) + chalk.yellow.bold(` ${userId} `) + chalk.green(` 의 기록을 저장했습니다. `), 2000);
-    else
-        await displayTextAnim(chalk.black.bgWhite(` Failed to update data `), 2000);
+    const resultFlag = await tryUpdateLeaderboard(userId, --stage);
 
-
+    switch(resultFlag)
+    {
+        case 'CREATE':
+            await displayTextAnim(chalk.green(` 새로운 유저 `) + chalk.yellow.bold(` ${userId} `) + chalk.green(`의 기록을 저장했습니다. `), 2000);
+            break;
+        case 'REPLACE':
+            await displayTextAnim(chalk.green(` 유저 `) + chalk.yellow.bold(` ${userId} `) + chalk.green(`의 신기록을 저장했습니다. `), 2000);
+            break;
+        case 'NO_UPDATE':
+            await displayTextAnim(chalk.green(` 유저 `) + chalk.yellow.bold(` ${userId} `) + chalk.green(`의 이전 기록에 미치지 못했습니다.`), 2000);
+            break;
+        default:
+            await displayTextAnim(chalk.black.bgWhite(` Failed to update data `), 2000);
+            break;
+    }
     // 검사해서 기록 갱신했는지 혹은 나의 기록 갱신했는지
 
 }

@@ -12,7 +12,7 @@ export const InitialStatData = {
     playerArmorAddAmount: 5,
     monsterMaxHp: 50,
     monsterHpCoef: 10,
-    monsterDmg: 25,
+    monsterDmg: 10,
     monsterDmgCoef: 5,
     monsterArmorInitAmount: 5,
     monsterArmorAddAmount: 10,
@@ -24,7 +24,7 @@ export const InitialProbData = {
 };
 // 그 이외 중요한 초기 게임 데이터
 export const GameData = {
-    maxStageNum : 3,                       // 10
+    maxStageNum : 10,                       // 10
 };
 // 액션타입
 export const ActionStateType = {
