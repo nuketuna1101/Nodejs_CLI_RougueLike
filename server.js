@@ -86,5 +86,5 @@ export function start() {
 // start();
 
 
-const userId = await userLogin();
+export const userId = await userLogin();
 start();

@@ -6,6 +6,7 @@
 import chalk from 'chalk';
 import readlineSync from 'readline-sync';
 import { start } from '../server.js';
+import { response } from 'express';
 
 // 리더보드 조회하기
 export async function checkLeaderboard(){
@@ -39,6 +40,35 @@ async function displayLeaderboard(){
     console.clear();
     logs.forEach((log) => {console.log(log)});
 }
+
+
+
+// 업데이트 시도
+export async function tryUpdateLeaderboard(userId, resultStageNo){
+    const {date, time} = getCurrentDateTime();
+    try {
+        const response = await fetch('http://localhost:3000/leaderboard/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json'},
+            body: JSON.stringify({date, time, userId, resultStageNo}),
+        });
+        
+        if (!response.ok)       
+            throw new Error('[Error] failed to update leaderboard');        
+        return response.ok;
+    } catch (e) {
+        console.error('[Error] error occurred :', e);
+        return false;
+    }
+}
+// 현재 시간 가져오기
+function getCurrentDateTime(){
+    const currentIsoDate = new Date().toISOString();
+    const date = currentIsoDate.split('T')[0];
+    const time = currentIsoDate.split('T')[1].split('.')[0];
+    return {date, time};
+}
+
 
 
 

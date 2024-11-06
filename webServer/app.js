@@ -1,4 +1,8 @@
-// app.js
+//================================================================================================================================
+//================================================================================================================================
+// app.js // 웹 서버 앱 : fetch API + firebase admin과 연결
+//================================================================================================================================
+//================================================================================================================================
 import express from 'express';
 import admin from 'firebase-admin';
 import fs from 'fs/promises';
@@ -17,21 +21,61 @@ const PORT = 3000;
 
 app.use(express.json());  // 여기에서 JSON 미들웨어를 추가합니다.
 
+
+// [기능] 업데이트
+app.post('/leaderboard/update', async (req, res) => {
+    // 데이터 정리
+    const {date, time, userId, resultStageNo} = req.body;
+    const data = {
+        date: date,
+        time: time,
+        userId: userId,
+        resultStageNo: resultStageNo,
+    };
+
+    try {
+        // userId 일치하는게 존재하는지 검색
+        const db = admin.firestore();
+        const leaderboardRef = db.collection('cli_rougelike');
+        const querySnapshot = await leaderboardRef.where('userId', '==', userId).get();
+
+        if (querySnapshot.empty)
+        {
+            // 불일치 시, 새로추가
+            await leaderboardRef.add(data);
+            res.status(200).send('[Success] new data updated');
+        }
+        else
+        {
+            // 일치 시, 점수가 더 높은지 비교하여
+            const docSnapshot = querySnapshot.docs[0];
+            const prevData = docSnapshot.data();
+
+            if (prevData.resultStageNo < data.resultStageNo)
+            {
+                // 기존꺼보다 높으면, 기존 데이터 삭제 후 현재 데이터 추가
+                await leaderboardRef.doc(docSnapshot.id).delete();
+                await leaderboardRef.add(data);
+                res.status(200).send('[Success] prev data deleted and new data updated');
+            }
+            else
+            {
+                // 기존꺼보다 같거나 작으면 업데이트할 이유 x
+                res.status(200).send('[info] no update');
+            }
+        }
+    } catch(e) {
+        res.status(500).send('[Error] Error updating data');
+    }
+});
+
+
+
+
+
 // 현재 연월일과 IP 주소를 Firestore에 저장하는 엔드포인트
 app.post('/leaderboard/add', async (req, res) => {
-    const currentDate = new Date();
-    console.log("currentDate : " + currentDate);
-
-    const {userId, resultStageNo} = req.body;
-    console.log("userId : " + userId);
-    console.log("resultStageNo : " + resultStageNo);
-
-
-    // 데이터
-    const isoTime = currentDate.toISOString();
-    const date = isoTime.split('T')[0];
-    const time = isoTime.split('T')[1].split('.')[0];
-
+    const {date, time, userId, resultStageNo} = req.body;
     const data = {
         date: date,
         time: time,
@@ -45,11 +89,11 @@ app.post('/leaderboard/add', async (req, res) => {
         res.status(200).send('[Success] data sending completed');
     } catch (error) {
         console.error('[Error] Error sending data:', error);
-        res.status(500).send('Error sending data');
+        res.status(500).send('[Error] Error sending data');
     }
 });
 
-// 리더보드를 읽어오는 엔드포인트
+// [기능] 조회 : 리더보드를 읽어오는 엔드포인트
 app.get('/leaderboard', async (req, res) => {
     try {
         const db = admin.firestore();
@@ -58,7 +102,6 @@ app.get('/leaderboard', async (req, res) => {
             id: doc.id,
             ...doc.data()
         }));
-
         res.status(200).json(leaderboard); // 리더보드 데이터 반환
     } catch (error) {
         console.error('[Error] Error fetching leaderboard:', error);

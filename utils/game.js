@@ -4,6 +4,8 @@ import { Monster } from '../models/Monster.js';
 import { InitialStatData, InitialProbData, GameData, ActionStateType} from '../models/data.js';
 import { refreshWholeDisplay, displayStatus, displayLog, displayTextAnim } from './display.js';
 import { turnPlayerAction, turnMonsterAction } from './turnAction.js';
+import { tryUpdateLeaderboard } from './leaderboard.js';
+import { userId } from '../server.js';
 /* to do:  파일 분리 + 스테이지 등 다른 클래스 객체화 */
 
 
@@ -103,6 +105,24 @@ export async function startGame() {
         
         stage++;
     }
+    // stage 값을 통해 클리어 했는지, 도중 사망했는지 알 수 있다.
+    if (stage > GameData.maxStageNum)
+    {
+        // 클리어 성공
+        await displayTextAnim(chalk.black.bgWhite(` 모든 스테이지를 완료했습니다. `), 2000);
+    }
+    else
+    {
+        // 도중 실패
+        await displayTextAnim(chalk.black.bgWhite(` G A M E  O V E R `), 2000);
+    }
+    const updateResult = await tryUpdateLeaderboard(userId, --stage);
+    if (updateResult)
+        await displayTextAnim(chalk.green(` 유저 `) + chalk.yellow.bold(` ${userId} `) + chalk.green(` 의 기록을 저장했습니다. `), 2000);
+    else
+        await displayTextAnim(chalk.black.bgWhite(` Failed to update data `), 2000);
 
-    await displayTextAnim(chalk.black.bgWhite(` G A M E  O V E R`), 2000);
+
+    // 검사해서 기록 갱신했는지 혹은 나의 기록 갱신했는지
+
 }
