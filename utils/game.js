@@ -5,7 +5,7 @@ import { InitialStatData, InitialProbData, GameData, ActionStateType} from '../m
 import { refreshWholeDisplay, displayStatus, displayLog, displayTextAnim } from './display.js';
 import { turnPlayerAction, turnMonsterAction } from './turnAction.js';
 import { tryUpdateLeaderboard } from './leaderboard.js';
-import { userId } from '../server.js';
+import { userId, start } from '../server.js';
 /* to do:  파일 분리 + 스테이지 등 다른 클래스 객체화 */
 
 
@@ -135,4 +135,7 @@ export async function startGame() {
     }
     // 검사해서 기록 갱신했는지 혹은 나의 기록 갱신했는지
 
+    await displayTextAnim(chalk.black.bgWhite(` 잠시 후 메인화면으로 돌아갑니다 `), 2000);
+    // 게임 다시 돌아가기
+    start();
 }

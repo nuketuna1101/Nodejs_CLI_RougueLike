@@ -45,7 +45,6 @@ async function displayLeaderboard(){
 
 // fetch API : POST : 리더보드에 데이터 추가
 export async function tryUpdateLeaderboard(userId, resultStageNo){
-    const {date, time} = getCurrentDateTime();
     try {
         const response = await fetch('http://localhost:3000/leaderboard/update', {
             method: 'POST',

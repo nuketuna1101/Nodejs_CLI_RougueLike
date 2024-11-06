@@ -9,12 +9,12 @@ export const InitialStatData = {
     playerDmg: 20,
     playerHealAmount: 10,
     playerArmorInitAmount: 2,
-    playerArmorAddAmount: 5,
+    playerArmorAddAmount: 6,
     monsterMaxHp: 50,
     monsterHpCoef: 10,
-    monsterDmg: 10,
-    monsterDmgCoef: 5,
-    monsterArmorInitAmount: 5,
+    monsterDmg: 12,
+    monsterDmgCoef: 4,
+    monsterArmorInitAmount: 3,
     monsterArmorCoef: 1,
 };
 // 확률값에 대한 초기화값 데이터 : -Prob 접미사 사용, x/100 값으로 백분율임
