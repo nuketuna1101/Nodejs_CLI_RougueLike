@@ -50,7 +50,7 @@ export async function tryUpdateLeaderboard(userId, resultStageNo){
         const response = await fetch('http://localhost:3000/leaderboard/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json'},
-            body: JSON.stringify({date, time, userId, resultStageNo}),
+            body: JSON.stringify({userId, resultStageNo}),
         });
         
         if (!response.ok)       
@@ -61,13 +61,6 @@ export async function tryUpdateLeaderboard(userId, resultStageNo){
         console.error('[Error] error occurred :', e);
         return 'ERROR';
     }
-}
-// 현재 시간 가져오기
-function getCurrentDateTime(){
-    const currentIsoDate = new Date().toISOString();
-    const date = currentIsoDate.split('T')[0];
-    const time = currentIsoDate.split('T')[1].split('.')[0];
-    return {date, time};
 }
 
 // fetch API : GET : 전체 리더보드 가져오기

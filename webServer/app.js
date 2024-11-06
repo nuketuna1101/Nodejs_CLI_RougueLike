@@ -22,10 +22,16 @@ const PORT = 3000;
 app.use(express.json());  // 여기에서 JSON 미들웨어를 추가합니다.
 
 
+// !!!! server 시간 vs db 시간
+// case : 1 : crud 작업 할때마다 >> 부가적인 쿼리 작성해야되서
+// case db : db로하면 db 자체 제공 시간 기록
+
+
 // [기능] 업데이트
 app.post('/leaderboard/update', async (req, res) => {
     // 데이터 정리
-    const {date, time, userId, resultStageNo} = req.body;
+    const { userId, resultStageNo} = req.body;
+    const { date, time } = getCurrentDateTime();
     const data = {
         date: date,
         time: time,
@@ -92,6 +98,18 @@ app.get('/leaderboard', async (req, res) => {
         res.status(500).send('Error fetching leaderboard');
     }
 });
+
+
+
+// 현재 시간 가져오기
+function getCurrentDateTime(){
+    const currentIsoDate = new Date().toISOString();
+    const date = currentIsoDate.split('T')[0];
+    const time = currentIsoDate.split('T')[1].split('.')[0];
+    return {date, time};
+}
+
+
 
 // 서버 시작
 const runServer = async () => {
