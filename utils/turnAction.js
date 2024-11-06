@@ -47,8 +47,36 @@ export async function turnPlayerAction(stage, player, monster, logs){
 };
 // 몬스터 턴 액션 : 우선은 공격으로 고정
 export async function turnMonsterAction(stage, player, monster, logs){
+    // 몬스터 턴 디스플레이
     const callbacks = [() => displayStatus(stage, player, monster), () => displayLog(logs)];
     await displayTextAnim(chalk.yellow("몬스터 행동 선택 중..."), 1000, callbacks);
+    // 몬스터의 턴 행동 결정 랜덤으로
+    const monsterChoice = Math.random();
+    // 행동 종류 : 공격 / 방어 / 치유
+    const actionProb1 = InitialProbData.monsterAtkProb / 100;
+    const actionProb2 = actionProb1 + InitialProbData.monsterSpellProb / 100;
+    const actionProb3 = actionProb2 + InitialProbData.monsterHealProb / 100;
+    // 랜덤 확률에 따라 분기
+    if (monsterChoice <= actionProb1)
+    {
+        await monsterAction1(stage, player, monster, logs);
+    }
+    else if (monsterChoice <= actionProb2)
+    {
+        await monsterAction2(stage, player, monster, logs);
+    }
+    else if (monsterChoice <= actionProb3)
+    {
+        await monsterAction3(stage, player, monster, logs);
+    }    
+    else
+    {
+        console.log("[Error] error on turnMonsterAction");
+        return;
+    }
+};
+// monster Atk
+async function monsterAction1(stage, player, monster, logs){
     let processedDmg;
     let isPefectBlocked = false;
     let isCounterAtk = false;
@@ -78,6 +106,49 @@ export async function turnMonsterAction(stage, player, monster, logs){
         logs.push(chalk.white('              ') + chalk.blue(`[반격] 발동>`) + chalk.yellow(` << ${Math.round(player.dmg * 1.5)}의 피해를 줌`));          // 일단은 반격데미지 하드코딩
     isPefectBlocked = false;
     isCounterAtk = false;
-
-
-};
+}
+// monster Spell : 75% 확률
+async function monsterAction2(stage, player, monster, logs){
+    const isSucceeded = (Math.random() <= 0.75);
+    if (isSucceeded)
+    {
+        let processedDmg;
+        let isPefectBlocked = false;
+        let isCounterAtk = false;
+    
+        // perfectBlock 리스너를 제거하여 중복 방지
+        player.removeAllListeners('perfectBlock');
+        player.removeAllListeners('processedDmg');
+        player.removeAllListeners('counterAtk');
+        // perfectBlock 이벤트에 대한 리스너 등록
+        player.once('perfectBlock', () => {
+            isPefectBlocked = true;
+        });
+        // counterAtk 이벤트에 대한 리스너 등록
+        player.once('counterAtk', () => {
+            isCounterAtk = true;
+            player.attack(monster, 1.5);
+        });
+        // processedDmg 이벤트에 대한 리스너 등록
+        player.once('processedDmg', (data) => {
+            processedDmg = data;
+        });
+        monster.attack(player, 1.75);
+        logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`[강한 일격]`) + chalk.yellow(` >> ${Math.round(monster.dmg * 1.75)}의 공격 >>`) 
+        + (isPefectBlocked ? chalk.blue(` [완벽한 방어] 발동`) : "") +  chalk.green(` >> ${processedDmg} 피해 받음`));
+        if (isCounterAtk)
+            logs.push(chalk.white('              ') + chalk.blue(`[반격] 발동>`) + chalk.yellow(` << ${Math.round(player.dmg * 1.5)}의 피해를 줌`));          // 일단은 반격데미지 하드코딩
+        isPefectBlocked = false;
+        isCounterAtk = false;
+    }
+    else
+    {
+        // 실패
+        logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`[강한 일격]`) + chalk.yellow(` -- 아무 일도 일어나지 않았다.`));
+    }
+}
+// monster heal
+async function monsterAction3(stage, player, monster, logs){
+    logs.push(chalk.red('[상대 턴]  :: ') + chalk.white.bgRed(`|회복|`) + chalk.yellow(` :: 체력을 회복했다.`));
+    monster.heal();
+}
